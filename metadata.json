@@ -1,0 +1,5 @@
+{
+  "name": "Starling Murmuration",
+  "description": "3D starling interactive boids murmuration simulation that follows hand movements via webcam.",
+  "requestFramePermissions": ["camera"]
+}
