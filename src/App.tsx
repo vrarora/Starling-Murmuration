@@ -1,10 +1,11 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Sky } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei';
 import { Boids } from './components/Boids';
 import { useHandTracking } from './hooks/useHandTracking';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
 import { Leva, useControls } from 'leva';
+import { Volume2, VolumeX, Video, VideoOff, Settings } from 'lucide-react';
 
 function HandIndicator({ targetRef, isFistRef }: { targetRef: React.RefObject<THREE.Vector3 | null>, isFistRef: React.RefObject<boolean> }) {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -39,6 +40,25 @@ function HandIndicator({ targetRef, isFistRef }: { targetRef: React.RefObject<TH
 
 export default function App() {
   const { targetRef, videoRef, isReady, error, isFistRef } = useHandTracking();
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [isVideoVisible, setIsVideoVisible] = useState(true);
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isMusicPlaying) {
+        audioRef.current.volume = 0.4; // Soothing volume
+        audioRef.current.play().catch(e => {
+          console.error("Audio play failed", e);
+          // Auto-revert state if browser blocks autoplay
+          setIsMusicPlaying(false);
+        });
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [isMusicPlaying]);
 
   const boidParams = useControls({
     separation: { value: 3.0, min: 0, max: 5, step: 0.1 },
@@ -59,39 +79,67 @@ export default function App() {
         background: 'linear-gradient(to bottom, #add0e2 0%, #fdeabe 45%, #eababa 60%, #503c3c 100%)'
       }}
     >
-      <Leva 
-        collapsed={false} 
-        theme={{
-          colors: {
-            elevation1: 'rgba(0, 0, 0, 0.2)',
-            elevation2: 'rgba(0, 0, 0, 0.3)',
-            elevation3: 'rgba(0, 0, 0, 0.4)',
-            accent1: '#ffffff',
-            accent2: '#f0f0f0',
-            accent3: '#e0e0e0',
-            highlight1: '#ffffff',
-            highlight2: '#f0f0f0',
-            highlight3: '#e0e0e0',
-            vivid1: '#ffffff',
-            folderWidgetColor: '#ffffff',
-            folderTextColor: '#ffffff',
-            toolTipBackground: 'rgba(0,0,0,0.8)',
-            toolTipText: '#ffffff',
-          },
-          radii: {
-            xs: '4px',
-            sm: '8px',
-            lg: '16px',
-          },
-        }}
-      />
+      <div className={`absolute top-24 right-8 z-30 w-[320px] transition-all duration-300 origin-top-right ${isSettingsVisible ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}>
+        <Leva 
+          fill
+          collapsed={false} 
+          theme={{
+            colors: {
+              elevation1: 'rgba(0, 0, 0, 0.2)',
+              elevation2: 'rgba(0, 0, 0, 0.3)',
+              elevation3: 'rgba(0, 0, 0, 0.4)',
+              accent1: '#ffffff',
+              accent2: '#f0f0f0',
+              accent3: '#e0e0e0',
+              highlight1: '#ffffff',
+              highlight2: '#f0f0f0',
+              highlight3: '#e0e0e0',
+              vivid1: '#ffffff',
+              folderWidgetColor: '#ffffff',
+              folderTextColor: '#ffffff',
+              toolTipBackground: 'rgba(0,0,0,0.8)',
+              toolTipText: '#ffffff',
+            },
+            radii: {
+              xs: '4px',
+              sm: '8px',
+              lg: '16px',
+            },
+          }}
+        />
+      </div>
       {/* Video element for MediaPipe and preview */}
       <video
         ref={videoRef}
-        className="absolute bottom-6 right-6 w-64 h-48 object-cover rounded-xl border border-white/10 shadow-lg scale-x-[-1] z-10"
+        className={`absolute bottom-6 right-6 w-64 h-48 object-cover rounded-xl border border-white/10 shadow-lg scale-x-[-1] z-10 transition-opacity duration-300 ${isVideoVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         playsInline
         muted
       />
+
+      {/* Top Right Controls */}
+      <div className="absolute top-8 right-8 z-20 flex gap-4">
+        <button
+          onClick={() => setIsSettingsVisible(!isSettingsVisible)}
+          className={`p-3 rounded-full backdrop-blur-md border transition-colors ${isSettingsVisible ? 'bg-white/20 border-white/40 text-white' : 'bg-black/20 border-white/20 text-white hover:bg-black/40'}`}
+          title={isSettingsVisible ? "Hide Settings" : "Show Settings"}
+        >
+          <Settings size={20} />
+        </button>
+        <button
+          onClick={() => setIsVideoVisible(!isVideoVisible)}
+          className={`p-3 rounded-full backdrop-blur-md border transition-colors ${!isVideoVisible ? 'bg-white/20 border-white/40 text-white' : 'bg-black/20 border-white/20 text-white hover:bg-black/40'}`}
+          title={isVideoVisible ? "Hide Camera" : "Show Camera"}
+        >
+          {isVideoVisible ? <Video size={20} /> : <VideoOff size={20} />}
+        </button>
+        <button
+          onClick={() => setIsMusicPlaying(!isMusicPlaying)}
+          className={`p-3 rounded-full backdrop-blur-md border transition-colors ${isMusicPlaying ? 'bg-white/20 border-white/40 text-white' : 'bg-black/20 border-white/20 text-white hover:bg-black/40'}`}
+          title={isMusicPlaying ? "Mute Music" : "Play Music"}
+        >
+          {isMusicPlaying ? <Volume2 size={20} /> : <VolumeX size={20} />}
+        </button>
+      </div>
 
       <div className="absolute top-8 left-8 z-10 text-white font-sans pointer-events-none">
         <h1 className="text-4xl font-light tracking-tight text-white/90">Starling Murmuration</h1>
@@ -128,6 +176,11 @@ export default function App() {
         
         <OrbitControls enablePan={false} enableZoom={true} />
       </Canvas>
+
+      {/* Background Music */}
+      <audio ref={audioRef} loop crossOrigin="anonymous">
+        <source src="/bg-music.mp3" type="audio/mpeg" />
+      </audio>
     </div>
   );
 }
